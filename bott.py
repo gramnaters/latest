@@ -1870,15 +1870,15 @@ class BatchRunner:
             _final_text = "🏁 Check Complete\n"
         else:
             _final_text = f"🛑 Stopped ({self.processed}/{self.total})\n"
+        _captcha_count = self.captcha if hasattr(self, 'captcha') else 0
         _final_text += (
             f"\nTotal: {self.total}"
             f"\n✅ Approved: {self.approved}"
             f"\n❌ Declined: {self.declined}"
             f"\n💎 Charged: {self.charged}"
+            f"\n⚠️ CAPTCHA: {_captcha_count}"
+            f"\n⏱ Time: {elapsed_s}s"
         )
-        if hasattr(self, 'captcha') and self.captcha > 0:
-            _final_text += f"\n⚠️ CAPTCHA: {self.captcha}"
-        _final_text += f"\n⏱ Time: {elapsed_s}s"
         await update.effective_chat.send_message(
             text=_final_text,
             parse_mode=ParseMode.HTML,
@@ -2788,10 +2788,9 @@ class BatchRunner:
             f"\n✅ Approved: {self.approved}"
             f"\n❌ Declined: {self.declined}"
             f"\n💎 Charged: {self.charged}"
+            f"\n⚠️ CAPTCHA: {self.captcha}"
+            f"\n⏱ Time: {elapsed_s}s"
         )
-        if self.captcha > 0:
-            final_text += f"\n⚠️ CAPTCHA: {self.captcha}"
-        final_text += f"\n⏱ Time: {elapsed_s}s"
         try:
             await update.effective_chat.send_message(
                 text=final_text,
@@ -4351,10 +4350,9 @@ async def cmd_sh(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"\n✅ Approved: {approved}"
                 f"\n❌ Declined: {declined}"
                 f"\n💎 Charged: {charged}"
+                f"\n⚠️ CAPTCHA: {captcha}"
+                f"\n⏱ Time: {elapsed_s}s"
             )
-            if captcha > 0:
-                _summary += f"\n⚠️ CAPTCHA: {captcha}"
-            _summary += f"\n⏱ Time: {elapsed_s}s"
             try:
                 await update.effective_chat.send_message(
                     text=_summary,

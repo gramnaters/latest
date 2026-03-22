@@ -336,10 +336,7 @@ def progress_block(total: int, processed: int, approved: int, declined: int, cha
         f"✅  Approved    : {approved}",
         f"❌Declined     :  {declined}",
         f"💎 Charged     :  {charged}  ",
-    ]
-    if captcha > 0:
-        lines.append(f"⚠️ CAPTCHA     :  {captcha}")
-    lines += [
+        f"⚠️ CAPTCHA     :  {captcha}",
         f" Time Elapsed : {elapsed:.2f}s ⏱️",
         f"━━━━━━━━━━━━━",
         f"⌥ Dev: @aldorsi",
