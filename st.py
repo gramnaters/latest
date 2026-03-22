@@ -150,8 +150,17 @@ def get_setup_intent(proxy=None):
     """
     global _session, _add_card_nonce, _session_email
     try:
-        if _session is None or _add_card_nonce is None:
+        if _session is None:
+            # No session at all — create a fresh account
             _session, _add_card_nonce, _session_email = _init_session(proxy)
+        elif _add_card_nonce is None:
+            # Session alive but nonce consumed — refresh proxy and fetch a new nonce
+            if proxy:
+                _session.proxies.update({"http": proxy, "https": proxy})
+            _add_card_nonce = _get_add_card_nonce(_session)
+            if not _add_card_nonce:
+                # Session expired — reinitialise fully
+                _session, _add_card_nonce, _session_email = _init_session(proxy)
 
         if _session is None:
             return None, None
@@ -326,6 +335,8 @@ def confirm_setup_intent(setup_intent_id, client_secret, payment_method_id,
                 code    = err.get("code", "")
                 decline = err.get("decline_code", "")
                 print(f"[ST] ❌ Declined — code={code} decline={decline} msg={msg}")
+                # Nonce is consumed — refresh on next card
+                _add_card_nonce = None
 
                 # Inject card info from source data into error so bott.py
                 # can display Brand/Country/Type instead of Unknown
