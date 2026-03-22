@@ -1866,11 +1866,37 @@ class BatchRunner:
                         logger.error(f"❌ Error sending {status} notification: {e}")
 
         elapsed_s = int(__import__("time").time() - (self.start_ts or __import__("time").time()))
+
+        # Send captcha cards .txt once at the end of the batch
+        _captcha_count = self.captcha if hasattr(self, 'captcha') else 0
+        if _captcha_count > 0 and self.captcha_cards:
+            try:
+                import io as _io
+                _lines = []
+                for c in self.captcha_cards:
+                    try:
+                        _pan = str(c.get("number", ""))
+                        _mm  = int(c.get("month", 0) or 0)
+                        _yy  = int(c.get("year", 0) or 0)
+                        _cvv = str(c.get("verification_value", ""))
+                        _lines.append(f"{_pan}|{_mm}|{_yy if _yy >= 2000 else _yy + 2000}|{_cvv}")
+                    except Exception:
+                        pass
+                if _lines:
+                    _fc = "\n".join(_lines).encode("utf-8")
+                    _fn = f"captcha_required_{self.user_id}_{self.batch_id.replace(':', '_')}.txt"
+                    await update.effective_chat.send_document(
+                        document=_io.BytesIO(_fc),
+                        filename=_fn,
+                        caption=("⚠️ " + str(_captcha_count) + (" card" if _captcha_count == 1 else " cards") + " with CAPTCHA_REQUIRED (skipped)"),
+                    )
+            except Exception as _cap_err:
+                logger.error(f"Failed to send captcha file: {_cap_err}")
+
         if self.processed == self.total:
             _final_text = "🏁 Check Complete\n"
         else:
             _final_text = f"🛑 Stopped ({self.processed}/{self.total})\n"
-        _captcha_count = self.captcha if hasattr(self, 'captcha') else 0
         _final_text += (
             f"\nTotal: {self.total}"
             f"\n✅ Approved: {self.approved}"
@@ -4237,17 +4263,19 @@ async def cmd_sh(update: Update, context: ContextTypes.DEFAULT_TYPE):
                         if user_proxies_list and len(user_proxies_list) > 0:
                             current_proxy_idx = (current_proxy_idx + 1) % len(user_proxies_list)
                         
-                        # Send detailed notification using result_notify_text
-                        notify_text = result_notify_text(
-                            card, status, code_display, amount_display, 
-                            site_label, display_name, receipt_id, user_id
-                        )
-                        
-                        await update.effective_chat.send_message(
-                            text=notify_text,
-                            parse_mode=ParseMode.HTML,
-                            disable_web_page_preview=True
-                        )
+                        # Send detailed notification for each card EXCEPT captcha
+                        # Captcha cards are collected and sent as a file at the end
+                        if status != "captcha":
+                            notify_text = result_notify_text(
+                                card, status, code_display, amount_display, 
+                                site_label, display_name, receipt_id, user_id
+                            )
+                            
+                            await update.effective_chat.send_message(
+                                text=notify_text,
+                                parse_mode=ParseMode.HTML,
+                                disable_web_page_preview=True
+                            )
 
                         # Update ACTIVE_BATCHES
                         try:
